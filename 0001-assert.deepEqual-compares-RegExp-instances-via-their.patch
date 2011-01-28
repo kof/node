@@ -1,0 +1,83 @@
+From 6a0a5d9007218aebdfb599966ed85a77b7dc7726 Mon Sep 17 00:00:00 2001
+From: Oleg Slobodskoi @oleg008 <oleg008@gmail.com>
+Date: Fri, 28 Jan 2011 17:55:54 +0100
+Subject: [PATCH] assert.deepEqual compares RegExp instances via their string representations now
+
+---
+ lib/assert.js              |   11 +++++++----
+ test/simple/test-assert.js |    8 ++++++--
+ 2 files changed, 13 insertions(+), 6 deletions(-)
+
+diff --git a/lib/assert.js b/lib/assert.js
+index c553909..f0899f1 100644
+--- a/lib/assert.js
++++ b/lib/assert.js
+@@ -131,7 +131,10 @@ function _deepEqual(actual, expected) {
+   // 7.1. All identical values are equivalent, as determined by ===.
+   if (actual === expected) {
+     return true;
+-
++  // 7.2 If expected and actual value are a RegExp instances,
++  // they are equivalent if their string representations are equivalent.
++  } else if (actual instanceof RegExp && expected instanceof RegExp) {
++    return actual.toString() == expected.toString();    
+   } else if (Buffer.isBuffer(actual) && Buffer.isBuffer(expected)) {
+     if (actual.length != expected.length) return false;
+ 
+@@ -141,17 +144,17 @@ function _deepEqual(actual, expected) {
+ 
+     return true;
+ 
+-  // 7.2. If the expected value is a Date object, the actual value is
++  // 7.3. If the expected value is a Date object, the actual value is
+   // equivalent if it is also a Date object that refers to the same time.
+   } else if (actual instanceof Date && expected instanceof Date) {
+     return actual.getTime() === expected.getTime();
+ 
+-  // 7.3. Other pairs that do not both pass typeof value == 'object',
++  // 7.4. Other pairs that do not both pass typeof value == 'object',
+   // equivalence is determined by ==.
+   } else if (typeof actual != 'object' && typeof expected != 'object') {
+     return actual == expected;
+ 
+-  // 7.4. For all other Object pairs, including Array objects, equivalence is
++  // 7.5. For all other Object pairs, including Array objects, equivalence is
+   // determined by having the same number of owned properties (as verified
+   // with Object.prototype.hasOwnProperty.call), the same set of keys
+   // (although not necessarily the same order), equivalent values for every
+diff --git a/test/simple/test-assert.js b/test/simple/test-assert.js
+index e2aa645..5303e71 100644
+--- a/test/simple/test-assert.js
++++ b/test/simple/test-assert.js
+@@ -46,7 +46,11 @@ assert.throws(makeBlock(a.strictEqual, null, undefined),
+ assert.doesNotThrow(makeBlock(a.notStrictEqual, 2, '2'), 'notStrictEqual');
+ 
+ // deepEquals joy!
++
+ // 7.2
++assert.doesNotThrow(makeBlock(a.deepEqual, /.*/, /.*/), 'deepEqual RegExp');
++
++// 7.3
+ assert.doesNotThrow(makeBlock(a.deepEqual, new Date(2000, 3, 14),
+                     new Date(2000, 3, 14)), 'deepEqual date');
+ 
+@@ -54,14 +58,14 @@ assert.throws(makeBlock(a.deepEqual, new Date(), new Date(2000, 3, 14)),
+               a.AssertionError,
+               'deepEqual date');
+ 
+-// 7.3
++// 7.4
+ assert.doesNotThrow(makeBlock(a.deepEqual, 4, '4'), 'deepEqual == check');
+ assert.doesNotThrow(makeBlock(a.deepEqual, true, 1), 'deepEqual == check');
+ assert.throws(makeBlock(a.deepEqual, 4, '5'),
+               a.AssertionError,
+               'deepEqual == check');
+ 
+-// 7.4
++// 7.5
+ // having the same number of owned properties && the same set of keys
+ assert.doesNotThrow(makeBlock(a.deepEqual, {a: 4}, {a: 4}));
+ assert.doesNotThrow(makeBlock(a.deepEqual, {a: 4, b: '2'}, {a: 4, b: '2'}));
+-- 
+1.7.3.1
+
